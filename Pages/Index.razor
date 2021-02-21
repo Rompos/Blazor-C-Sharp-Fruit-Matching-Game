@@ -1,0 +1,164 @@
+﻿@page "/"
+<!--Now you’ll start working on the C# code,
+which will be in the Index.razor file. A file
+that ends with .razor is a Razor markup
+page. Razor combines HTML for page
+layout with C# code, all in the same file.
+You’ll add C# code to this file that defines
+the behavior of the game, including code
+to add the emoji to the page, handle mouse
+clicks, and make the countdown timer work.
+    In your C# code there was a file called
+Program.cs—when you see that .cs file extension,
+it tells you that the file contains C# code.-->
+
+@using System.Timers <!--in order to use a Timer in your C# code-->
+<style>
+    .container {
+        width: 600px;
+    }
+
+    /*The matching game is made up of a series of buttons. This
+    is a really simple CSS stylesheet to set the total width of
+    the container, and the height and width of each button.
+    Since the container is 600 pixels wide and each button is
+    100 pixels wide, the page will only allow six columns in a
+    row before adding a break, making them appear in a grid.
+    When resized the lines of each row change accordingly  */
+
+    button {
+        width: 100px;
+        height: 100px;
+        font-size: 50px;
+    }
+</style>
+
+<div class="container">
+    <div class="row">
+        <!-- The @@ how you tell a Razor page to include C# code. This is a foreach loop that runs the same code over and over again to generate a button for each emoji in a list of icon emoji .
+        If you’ve worked with HTML before, you’ll notice the @@foreach and @@icon that don’t look like ordinary HTML. That’s Blazor—C# code embedded directly into the HTML.I have changed the ObjectIcons with the new list shuffledIcons to place each icon at random position each time-->
+        @for (var iconNumber = 0; iconNumber < shuffledIcons.Count; iconNumber++)
+        {
+            var icon = shuffledIcons[iconNumber];
+            var uniqueDescription = $"Button #{iconNumber}";
+            <div class="col-xs-3" style="background-color:lightcyan;">
+                <button @onclick="@(()=>ButtonClick(icon, uniqueDescription))" type="button" class="btn btn-outline-dark">
+                    <!--Add this @@onclick attribute to the HTML inside your foreach. Be really careful with the parentheses.-->
+                    <h1>@icon</h1><!-- Each button on the page contains a different icon. The players will press the buttons to find matches.-->
+                    <!--The foreach loop causes everything between the { and } to be repeated once for each emoji in a list of icon emoji, replacing @@icon with each of the emoji in the list one by one. Since the list has 30 emoji, the result is a series of 30 buttons.-->
+                </button>
+            </div>
+        }
+    </div>
+    <div class="row">
+        <h2>Matches found: @matchesFound</h2>
+        <!--This Razor markup uses @@matchesFound to
+        make the page display the number of matches
+        found underneath the grid of buttons.-->
+    </div>
+    <div class="row">
+        <h2>Time: @timeDisplay</h2><!--update the HTML markup to display the time-->
+    </div>
+</div>
+
+
+@code {
+
+    List<string> ObjectIcons = new List<string>()
+{
+        "🍐","🍐",
+        "🍎","🍎",
+        "🍌","🍌",
+        "🍓","🍓",
+        "🍍","🍍",
+        "🍒","🍒",
+        "🍇","🍇",
+        "🍉","🍉",
+        "🍊","🍊",
+        "🍏","🍏",
+        "🍑","🍑",
+        "🥥","🥥",
+        "🥝","🥝",
+        "🥑","🥑",
+        "🥭","🥭",
+    };
+
+    List<string> shuffledIcons = new List<string>();
+    int matchesFound = 0; //This is where the game keeps track of the number of matches the player's found so far
+    Timer timer;//to keep track of the elapsed time
+    int tenthsOfSecondsElapsed = 0;//to keep track of the elapsed time
+    string timeDisplay;//to keep track of the elapsed time
+
+
+    protected override void OnInitialized()
+    {
+        timer = new Timer(100);// tell the timer how frequently to “tick” and what method to call. Do this in the OnInitialized method, which is called once after the page is loaded
+        timer.Elapsed += Timer_Tick;
+
+        SetUpGame();
+    }
+
+    private void SetUpGame()
+    {
+        Random random = new Random();
+        shuffledIcons = ObjectIcons
+            .OrderBy(item => random.Next())
+            .ToList();
+        matchesFound = 0;//When the game is set up or reset, it resets the number of matches found back to zero.
+        tenthsOfSecondsElapsed = 0;//Reset the timer when you set up the game
+    }
+
+    string lastIconFound = string.Empty;
+    string lastDescription = string.Empty;//Now each button gets a description as well as an animal, and the event handler uses lastDescription to keep track of it.  Fixes the bug of double clicking the same button.
+
+    private void ButtonClick(string icon, string iconDescription)//Add this @@onclick attribute to the HTML inside your foreach. Be really careful with the parentheses.
+    {
+        if (lastIconFound == string.Empty)//The player clicks the first button.
+        {
+            // First selection of the pair. Remember it.
+            lastIconFound = icon;
+            lastDescription = iconDescription;
+
+            timer.Start(); //You need to stop and start your timer. Add this line of code near the top of the ButtonClick method to start the timer when the player clicks the first button
+        }
+        else if ((lastIconFound == icon) && (iconDescription != lastDescription))//The player clicks the second button.
+        {
+            // Match found! Reset for next pair.
+            lastIconFound = string.Empty;
+            // Replace found icons with empty string to hide them.
+            shuffledIcons = shuffledIcons//The game checks for a match.
+            .Select(a => a.Replace(icon, string.Empty))//This is a LINQ query.The game checks for a match.
+            .ToList();//The game checks for a match.
+            matchesFound++;
+            //Language - Integrated Query(LINQ) is the name for a set of technologies based on the integration of query capabilities directly into the C# language. Traditionally, queries against data are expressed as simple strings without type checking at compile time or IntelliSense support
+            if (matchesFound == 15)//Every time the player finds a match this block adds 1 to matchesFound.If all 15 matches are found, it resets the game.
+                {
+                    timer.Stop(); //When all the pairs are found stop timer
+                    timeDisplay += " - Play Again?";
+
+                    SetUpGame();
+                }
+        }
+        else
+        {
+            // User selected a pair that don't match.
+            // Reset selection.
+            lastIconFound = string.Empty;//It blanks out the last animal found to reset the game so the next button click is the first of the pair.
+        }
+    }
+
+    @*Finally, your timer needs to know what to do each time it ticks. Just like buttons have
+        Click event handlers, timers have Tick event handlers: methods that get executed
+        every time the timer ticks.*@
+    private void Timer_Tick(Object source, ElapsedEventArgs e)
+    {
+        InvokeAsync(() =>
+        {
+            tenthsOfSecondsElapsed++;
+            timeDisplay = (tenthsOfSecondsElapsed / 10F)
+                .ToString("0.0s");
+            StateHasChanged();
+        });
+    }
+
+}
